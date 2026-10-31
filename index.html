@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lil Bump Land Tools</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70;
+    --border: #d9d6cf; --accent: #3f7d3a; --accent-text: #fff;
+    --code-bg: #1e1f22; --code-text: #e6e6e6; --error: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a; --panel: #212226; --text: #ececec; --muted: #9a9aa0;
+      --border: #34353a; --accent: #5aa152; --accent-text: #0d140c;
+      --code-bg: #0f1012; --code-text: #e6e6e6; --error: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  section {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; margin-bottom: 16px;
+  }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  textarea { resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: stretch; }
+  .row textarea { flex: 1; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+  .full { margin-top: 12px; }
+  button {
+    border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-weight: 600;
+    background: var(--accent); color: var(--accent-text); cursor: pointer; white-space: nowrap;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--text); font-size: 14px; }
+  .check input { width: auto; }
+  .rot.disabled { opacity: .4; }
+  .status { font-size: 13px; margin-top: 8px; min-height: 1.5em; color: var(--muted); }
+  .status.error { color: var(--error); }
+  .hint { font-size: 13px; color: var(--muted); margin: -4px 0 12px; }
+  .hint code { word-break: break-all; }
+  pre {
+    margin: 0; padding: 14px; border-radius: 6px; background: var(--code-bg); color: var(--code-text);
+    font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+  }
+  .out-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .out-actions .status { margin-top: 0; }
+  kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Teleport Generator</h1>
+  <p class="sub">Builds calls to <code>lbl:teleport/tp</code> and <code>lbl:teleport/tpr</code>.</p>
+
+  <section>
+    <h2>1. F3+C command (optional)</h2>
+    <p class="hint">In game, stand at the destination, look in the direction you want and press <kbd>F3</kbd>+<kbd>C</kbd>.
+      That copies a command with your position and rotation to the clipboard, like
+      <code>execute in minecraft:overworld run tp @s 18.30 -57.85 3.08 434.36 11.21</code>.
+      Then paste it here.</p>
+    <div class="row">
+      <textarea id="src" rows="2" placeholder="execute in minecraft:overworld run tp @s 18.30 -57.85 3.08 434.36 11.21"></textarea>
+      <button id="pasteBtn" type="button">Paste</button>
+    </div>
+    <div class="status" id="parseStatus">Tip: press <kbd>Ctrl</kbd>+<kbd>V</kbd> anywhere on the page to paste the command.</div>
+  </section>
+
+  <section>
+    <h2>2. Arguments</h2>
+    <div class="grid">
+      <div><label for="price">price</label><input id="price" type="number" step="1" min="0" value="0"></div>
+      <div><label for="x">x</label><input id="x" type="text" inputmode="decimal"></div>
+      <div><label for="y">y</label><input id="y" type="text" inputmode="decimal"></div>
+      <div><label for="z">z</label><input id="z" type="text" inputmode="decimal"></div>
+      <div class="rot"><label for="yaw">yaw</label><input id="yaw" type="text" inputmode="decimal" value="0"></div>
+      <div class="rot"><label for="pitch">pitch</label><input id="pitch" type="text" inputmode="decimal" value="0"></div>
+    </div>
+    <div class="full">
+      <label for="message">message</label>
+      <input id="message" type="text" placeholder="I should be charging more for this service!">
+    </div>
+    <label class="check"><input id="useRot" type="checkbox" checked> Use yaw/pitch (unchecked uses <code>tpr</code>)</label>
+  </section>
+
+  <section>
+    <h2>3. Result</h2>
+    <pre id="out"></pre>
+    <div class="out-actions">
+      <button id="copyBtn" type="button">Copy</button>
+      <span class="status" id="outStatus"></span>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const fields = ["price", "x", "y", "z", "yaw", "pitch", "message"];
+const NUM = "(-?\\d*\\.?\\d+)";
+const TP_RE = new RegExp(`\\btp\\s+\\S+\\s+${NUM}\\s+${NUM}\\s+${NUM}(?:\\s+${NUM}\\s+${NUM})?`);
+
+// Remembers price/message/rotation toggle between visits
+const SAVED = ["price", "message"];
+try {
+  const s = JSON.parse(localStorage.getItem("lbl-tp") || "{}");
+  SAVED.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
+  if (s.useRot != null) $("useRot").checked = s.useRot;
+} catch {}
+function save() {
+  try {
+    const s = { useRot: $("useRot").checked };
+    SAVED.forEach(k => s[k] = $(k).value);
+    localStorage.setItem("lbl-tp", JSON.stringify(s));
+  } catch {}
+}
+
+function parseCommand(text) {
+  const m = TP_RE.exec(text || "");
+  const st = $("parseStatus");
+  if (!m) {
+    st.textContent = text.trim() ? "Couldn't find a tp command with coordinates." : "";
+    st.className = "status" + (text.trim() ? " error" : "");
+    return false;
+  }
+  $("x").value = m[1]; $("y").value = m[2]; $("z").value = m[3];
+  if (m[4] != null) { $("yaw").value = m[4]; $("pitch").value = m[5]; }
+  st.textContent = "Coordinates imported" + (m[4] != null ? " (with yaw/pitch)." : ".");
+  st.className = "status";
+  generate();
+  return true;
+}
+
+function num(v) {
+  v = String(v).trim().replace(",", ".");
+  if (!/^-?\d*\.?\d+$/.test(v)) return null;
+  return String(Number(v));
+}
+
+// message is substituted into a JSON string inside tellraw, so escape for JSON first, then for SNBT
+function escapeMessage(s) {
+  const json = s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return '"' + json.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+}
+
+function generate() {
+  const useRot = $("useRot").checked;
+  document.querySelectorAll(".rot").forEach(el => el.classList.toggle("disabled", !useRot));
+  $("yaw").disabled = $("pitch").disabled = !useRot;
+
+  const keys = useRot ? ["price", "x", "y", "z", "pitch", "yaw"] : ["price", "x", "y", "z"];
+  const parts = [], invalid = [];
+  for (const k of keys) {
+    const v = num($(k).value);
+    if (v == null) invalid.push(k); else parts.push(`${k}:${v}`);
+  }
+  parts.push(`message:${escapeMessage($("message").value)}`);
+
+  const fn = useRot ? "lbl:teleport/tp" : "lbl:teleport/tpr";
+  $("out").textContent = `execute as @p run function ${fn} {${parts.join(",")}}`;
+  $("outStatus").textContent = invalid.length ? "Invalid value in: " + invalid.join(", ") : "";
+  $("outStatus").className = "status" + (invalid.length ? " error" : "");
+  $("copyBtn").disabled = invalid.length > 0;
+  save();
+}
+
+fields.forEach(k => $(k).addEventListener("input", generate));
+$("useRot").addEventListener("change", generate);
+$("src").addEventListener("input", e => parseCommand(e.target.value));
+
+$("pasteBtn").addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    $("src").value = text;
+    if (parseCommand(text)) $("message").focus();
+  } catch {
+    $("parseStatus").textContent = "No permission to read the clipboard. Paste into the field with Ctrl+V.";
+    $("parseStatus").className = "status error";
+  }
+});
+
+// Ctrl+V outside a text field imports the command
+document.addEventListener("paste", e => {
+  if (e.target.closest("input, textarea")) return;
+  const text = e.clipboardData.getData("text");
+  e.preventDefault();
+  $("src").value = text;
+  if (parseCommand(text)) $("message").focus();
+});
+
+$("copyBtn").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText($("out").textContent);
+    $("outStatus").textContent = "Copied!";
+  } catch {
+    $("outStatus").textContent = "Couldn't copy, select the text manually.";
+  }
+  $("outStatus").className = "status";
+});
+
+generate();
+</script>
+</body>
+</html>
