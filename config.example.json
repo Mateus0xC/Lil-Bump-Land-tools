@@ -1,0 +1,17 @@
+{
+  "datapacks_dir": "..",
+  "resourcepacks_dir": "C:/Users/<user>/AppData/Roaming/.minecraft/resourcepacks",
+  "output_dir": "output",
+  "exclude": [
+    ".git",
+    "spyglass.json"
+  ],
+  "merged_resourcepack": {
+    "name": "Lil Bump Land Resources",
+    "sources": [
+      "Geckonomy",
+      "Lil Bump Essentials"
+    ],
+    "description": "Merged Resourcepack"
+  }
+}
