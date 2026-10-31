@@ -25,6 +25,8 @@
   <section>
     <h2>2. Arguments</h2>
     <div class="grid">
+      <div class="full"><label for="dimension">dimension</label><input id="dimension" type="text" value="minecraft:overworld"></div>
+      <div class="full"><label for="selector">selector</label><input id="selector" type="text" value="@p"></div>
       <div><label for="x">x</label><input id="x" type="text" inputmode="decimal"></div>
       <div><label for="y">y</label><input id="y" type="text" inputmode="decimal"></div>
       <div><label for="z">z</label><input id="z" type="text" inputmode="decimal"></div>
@@ -51,12 +53,13 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const fields = ["price", "x", "y", "z", "yaw", "pitch", "message"];
+const fields = ["dimension", "selector", "price", "x", "y", "z", "yaw", "pitch", "message"];
 const NUM = "(-?\\d*\\.?\\d+)";
 const TP_RE = new RegExp(`\\btp\\s+\\S+\\s+${NUM}\\s+${NUM}\\s+${NUM}(?:\\s+${NUM}\\s+${NUM})?`);
+const DIM_RE = /\bin\s+([a-z0-9_.-]+:[a-z0-9_./-]+)/;
 
-// Remembers price/message/rotation toggle between visits
-const SAVED = ["price", "message"];
+// Remembers selector/price/message/rotation toggle between visits
+const SAVED = ["selector", "price", "message"];
 try {
   const s = JSON.parse(localStorage.getItem("lbl-tp") || "{}");
   SAVED.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
@@ -80,6 +83,8 @@ function parseCommand(text) {
   }
   $("x").value = m[1]; $("y").value = m[2]; $("z").value = m[3];
   if (m[4] != null) { $("yaw").value = m[4]; $("pitch").value = m[5]; }
+  const dim = DIM_RE.exec(text.slice(0, m.index));
+  $("dimension").value = dim ? dim[1] : "minecraft:overworld";
   st.textContent = "Coordinates imported.";
   st.className = "status";
   generate();
@@ -112,8 +117,16 @@ function generate() {
   }
   parts.push(`message:${escapeMessage($("message").value)}`);
 
+  const selector = $("selector").value.trim();
+  if (!selector) invalid.push("selector");
+  let dim = $("dimension").value.trim() || "minecraft:overworld";
+  if (!dim.includes(":")) dim = "minecraft:" + dim;
+  if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(dim)) invalid.push("dimension");
+  // "as" before "in" so the selector still picks players in their current dimension
+  const inDim = dim === "minecraft:overworld" ? "" : ` in ${dim}`;
+
   const fn = useRot ? "lbl:teleport/tp" : "lbl:teleport/tpr";
-  $("out").textContent = `execute as @p run function ${fn} {${parts.join(",")}}`;
+  $("out").textContent = `execute as ${selector}${inDim} run function ${fn} {${parts.join(",")}}`;
   $("outStatus").textContent = invalid.length ? "Invalid value in: " + invalid.join(", ") : "";
   $("outStatus").className = "status" + (invalid.length ? " error" : "");
   $("copyBtn").disabled = invalid.length > 0;
