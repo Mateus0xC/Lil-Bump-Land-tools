@@ -25,8 +25,15 @@
   <section>
     <h2>2. Arguments</h2>
     <div class="grid">
-      <div class="full"><label for="dimension">dimension</label><input id="dimension" type="text" value="minecraft:overworld"></div>
-      <div class="full"><label for="selector">selector</label><input id="selector" type="text" value="@p"></div>
+      <div class="full">
+        <label for="dimension">dimension</label>
+        <input id="dimension" type="text" list="dimensions" value="minecraft:overworld" autocomplete="off">
+        <datalist id="dimensions">
+          <option value="minecraft:overworld">
+          <option value="minecraft:the_end">
+          <option value="minecraft:the_nether">
+        </datalist>
+      </div>
       <div><label for="x">x</label><input id="x" type="text" inputmode="decimal"></div>
       <div><label for="y">y</label><input id="y" type="text" inputmode="decimal"></div>
       <div><label for="z">z</label><input id="z" type="text" inputmode="decimal"></div>
@@ -53,13 +60,13 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const fields = ["dimension", "selector", "price", "x", "y", "z", "yaw", "pitch", "message"];
+const fields = ["dimension", "price", "x", "y", "z", "yaw", "pitch", "message"];
 const NUM = "(-?\\d*\\.?\\d+)";
 const TP_RE = new RegExp(`\\btp\\s+\\S+\\s+${NUM}\\s+${NUM}\\s+${NUM}(?:\\s+${NUM}\\s+${NUM})?`);
 const DIM_RE = /\bin\s+([a-z0-9_.-]+:[a-z0-9_./-]+)/;
 
-// Remembers selector/price/message/rotation toggle between visits
-const SAVED = ["selector", "price", "message"];
+// Remembers price/message/rotation toggle between visits
+const SAVED = ["price", "message"];
 try {
   const s = JSON.parse(localStorage.getItem("lbl-tp") || "{}");
   SAVED.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
@@ -117,16 +124,13 @@ function generate() {
   }
   parts.push(`message:${escapeMessage($("message").value)}`);
 
-  const selector = $("selector").value.trim();
-  if (!selector) invalid.push("selector");
-  let dim = $("dimension").value.trim() || "minecraft:overworld";
+  // While the field is focused and cleared (see below), the placeholder holds the current value
+  let dim = $("dimension").value.trim() || $("dimension").placeholder || "minecraft:overworld";
   if (!dim.includes(":")) dim = "minecraft:" + dim;
   if (!/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(dim)) invalid.push("dimension");
-  // "as" before "in" so the selector still picks players in their current dimension
-  const inDim = dim === "minecraft:overworld" ? "" : ` in ${dim}`;
-
+  // "as" before "in" so @p still picks the player in their current dimension
   const fn = useRot ? "lbl:teleport/tp" : "lbl:teleport/tpr";
-  $("out").textContent = `execute as ${selector}${inDim} run function ${fn} {${parts.join(",")}}`;
+  $("out").textContent = `execute as @p in ${dim} run function ${fn} {${parts.join(",")}}`;
   $("outStatus").textContent = invalid.length ? "Invalid value in: " + invalid.join(", ") : "";
   $("outStatus").className = "status" + (invalid.length ? " error" : "");
   $("copyBtn").disabled = invalid.length > 0;
@@ -135,6 +139,19 @@ function generate() {
 
 fields.forEach(k => $(k).addEventListener("input", generate));
 $("ignoreRot").addEventListener("change", generate);
+
+// A datalist only suggests options matching the current text, so clear the field on focus to show
+// all dimensions; the old value stays as placeholder and comes back if nothing is picked
+const dimInput = $("dimension");
+dimInput.addEventListener("focus", () => {
+  dimInput.placeholder = dimInput.value;
+  dimInput.value = "";
+});
+dimInput.addEventListener("blur", () => {
+  if (!dimInput.value.trim()) dimInput.value = dimInput.placeholder;
+  dimInput.placeholder = "";
+  generate();
+});
 $("src").addEventListener("input", e => parseCommand(e.target.value));
 
 $("pasteBtn").addEventListener("click", async () => {
