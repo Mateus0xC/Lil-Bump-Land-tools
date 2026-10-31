@@ -39,14 +39,15 @@
   textarea { resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
   .row { display: flex; gap: 8px; align-items: stretch; }
   .row textarea { flex: 1; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
-  .full { margin-top: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .wide { grid-column: span 2; }
+  @media (max-width: 480px) { .wide { grid-column: 1 / -1; } }
   button {
     border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-weight: 600;
     background: var(--accent); color: var(--accent-text); cursor: pointer; white-space: nowrap;
   }
   button:disabled { opacity: .5; cursor: not-allowed; }
-  .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--text); font-size: 14px; }
+  .check { display: flex; align-items: center; gap: 8px; align-self: end; height: 40px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
   .check input { width: auto; }
   .rot.disabled { opacity: .4; }
   .status { font-size: 13px; margin-top: 8px; min-height: 1.5em; color: var(--muted); }
@@ -68,11 +69,8 @@
   <p class="sub">Builds calls to <code>lbl:teleport/tp</code> and <code>lbl:teleport/tpr</code>.</p>
 
   <section>
-    <h2>1. F3+C command (optional)</h2>
-    <p class="hint">In game, stand at the destination, look in the direction you want and press <kbd>F3</kbd>+<kbd>C</kbd>.
-      That copies a command with your position and rotation to the clipboard, like
-      <code>execute in minecraft:overworld run tp @s 18.30 -57.85 3.08 434.36 11.21</code>.
-      Then paste it here.</p>
+    <h2>1. F3+C command</h2>
+    <p class="hint">Stand at the destination in game, press <kbd>F3</kbd>+<kbd>C</kbd> and paste the copied command here.</p>
     <div class="row">
       <textarea id="src" rows="2" placeholder="execute in minecraft:overworld run tp @s 18.30 -57.85 3.08 434.36 11.21"></textarea>
       <button id="pasteBtn" type="button">Paste</button>
@@ -83,18 +81,18 @@
   <section>
     <h2>2. Arguments</h2>
     <div class="grid">
-      <div><label for="price">price</label><input id="price" type="number" step="1" min="0" value="0"></div>
       <div><label for="x">x</label><input id="x" type="text" inputmode="decimal"></div>
       <div><label for="y">y</label><input id="y" type="text" inputmode="decimal"></div>
       <div><label for="z">z</label><input id="z" type="text" inputmode="decimal"></div>
       <div class="rot"><label for="yaw">yaw</label><input id="yaw" type="text" inputmode="decimal" value="0"></div>
       <div class="rot"><label for="pitch">pitch</label><input id="pitch" type="text" inputmode="decimal" value="0"></div>
+      <label class="check"><input id="ignoreRot" type="checkbox"> Ignore rotation</label>
+      <div><label for="price">price</label><input id="price" type="text" inputmode="numeric" value="0"></div>
+      <div class="wide">
+        <label for="message">message</label>
+        <input id="message" type="text" placeholder="I should be charging more for this service!">
+      </div>
     </div>
-    <div class="full">
-      <label for="message">message</label>
-      <input id="message" type="text" placeholder="I should be charging more for this service!">
-    </div>
-    <label class="check"><input id="useRot" type="checkbox" checked> Use yaw/pitch (unchecked uses <code>tpr</code>)</label>
   </section>
 
   <section>
@@ -118,11 +116,11 @@ const SAVED = ["price", "message"];
 try {
   const s = JSON.parse(localStorage.getItem("lbl-tp") || "{}");
   SAVED.forEach(k => { if (s[k] != null) $(k).value = s[k]; });
-  if (s.useRot != null) $("useRot").checked = s.useRot;
+  if (s.ignoreRot != null) $("ignoreRot").checked = s.ignoreRot;
 } catch {}
 function save() {
   try {
-    const s = { useRot: $("useRot").checked };
+    const s = { ignoreRot: $("ignoreRot").checked };
     SAVED.forEach(k => s[k] = $(k).value);
     localStorage.setItem("lbl-tp", JSON.stringify(s));
   } catch {}
@@ -157,7 +155,7 @@ function escapeMessage(s) {
 }
 
 function generate() {
-  const useRot = $("useRot").checked;
+  const useRot = !$("ignoreRot").checked;
   document.querySelectorAll(".rot").forEach(el => el.classList.toggle("disabled", !useRot));
   $("yaw").disabled = $("pitch").disabled = !useRot;
 
@@ -165,7 +163,8 @@ function generate() {
   const parts = [], invalid = [];
   for (const k of keys) {
     const v = num($(k).value);
-    if (v == null) invalid.push(k); else parts.push(`${k}:${v}`);
+    if (v == null || (k === "price" && !Number.isInteger(+v))) invalid.push(k);
+    else parts.push(`${k}:${v}`);
   }
   parts.push(`message:${escapeMessage($("message").value)}`);
 
@@ -178,7 +177,7 @@ function generate() {
 }
 
 fields.forEach(k => $(k).addEventListener("input", generate));
-$("useRot").addEventListener("change", generate);
+$("ignoreRot").addEventListener("change", generate);
 $("src").addEventListener("input", e => parseCommand(e.target.value));
 
 $("pasteBtn").addEventListener("click", async () => {
