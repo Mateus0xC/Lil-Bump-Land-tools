@@ -4,14 +4,17 @@
   "output_dir": "output",
   "exclude": [
     ".git",
-    "spyglass.json"
+    "spyglass.json",
+    "pack.png"
   ],
   "merged_resourcepack": {
     "name": "Lil Bump Land Resources",
     "sources": [
+      "serverresourcepack",
       "Geckonomy",
       "Lil Bump Essentials"
     ],
-    "description": "Merged Resourcepack"
+    "description": "Merged Resourcepack",
+    "icon": "Geckonomy/assets/gecon/textures/item/item/currency.png"
   }
 }

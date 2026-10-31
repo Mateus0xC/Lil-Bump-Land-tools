@@ -1,7 +1,9 @@
 """Builds release zips into the output folder. Paths and names come from config.json.
 
 output/data/       every folder in datapacks_dir, zipped (existing .zip files are copied as-is)
-output/resources/  merged_resourcepack: its sources from resourcepacks_dir merged into one zip
+output/resources/  merged_resourcepack: its sources merged into one zip. A source is a folder or
+                   .zip, either a name inside resourcepacks_dir or an absolute path. The optional
+                   "icon" (same path rules) becomes the zip's pack.png.
 
 - Folder contents go at the root of the zip (no wrapping folder).
 - Anything listed in "exclude" (e.g. .git, spyglass.json) is left out.
@@ -26,6 +28,7 @@ EXCLUDE = set(CONFIG["exclude"])
 MERGED_NAME = CONFIG["merged_resourcepack"]["name"]
 MERGED_SOURCES = CONFIG["merged_resourcepack"]["sources"]
 MERGED_DESCRIPTION = CONFIG["merged_resourcepack"]["description"]
+MERGED_ICON = CONFIG["merged_resourcepack"].get("icon")
 
 
 def iter_files(folder: Path):
@@ -34,6 +37,19 @@ def iter_files(folder: Path):
         if EXCLUDE.intersection(rel.parts) or not path.is_file():
             continue
         yield rel.as_posix(), path
+
+
+def read_pack(pack: Path):
+    """Yields (relative path, bytes) for every file in a pack folder or .zip."""
+    if pack.suffix.lower() == ".zip":
+        with zipfile.ZipFile(pack) as zf:
+            for info in zf.infolist():
+                if info.is_dir() or EXCLUDE.intersection(info.filename.split("/")):
+                    continue
+                yield info.filename, zf.read(info)
+    else:
+        for rel, path in iter_files(pack):
+            yield rel, path.read_bytes()
 
 
 def zip_folder(folder: Path, dest: Path) -> None:
@@ -54,13 +70,21 @@ def merge_dicts(dict1, dict2):
     return dict1
 
 
+def is_mergeable(rel: str) -> bool:
+    """Files that combine across packs. Anything else (models, blockstates...) is replaced whole,
+    since deep-merging those would e.g. concatenate model elements."""
+    if rel in ("pack.mcmeta",) or rel.endswith("/sounds.json"):
+        return True
+    parts = rel.split("/")
+    return rel.endswith(".json") and len(parts) > 3 and parts[2] in ("lang", "font", "atlases")
+
+
 def merge_packs(packs: list[Path], dest: Path) -> None:
-    """Later packs overwrite earlier ones; conflicting .json objects are deep-merged."""
+    """Later packs overwrite earlier ones; lang/font/atlases/sounds.json/pack.mcmeta are deep-merged."""
     files: dict[str, bytes] = {}
     for pack in packs:
-        for rel, path in iter_files(pack):
-            data = path.read_bytes()
-            if rel in files and rel.endswith(".json"):
+        for rel, data in read_pack(pack):
+            if rel in files and is_mergeable(rel):
                 try:
                     d1, d2 = json.loads(files[rel]), json.loads(data)
                     if isinstance(d1, dict) and isinstance(d2, dict):
@@ -73,9 +97,16 @@ def merge_packs(packs: list[Path], dest: Path) -> None:
         try:
             mcmeta = json.loads(files["pack.mcmeta"])
             mcmeta["pack"]["description"] = MERGED_DESCRIPTION
+            entries = mcmeta.get("overlays", {}).get("entries")
+            if entries:
+                # Same overlay directory declared by several packs: keep the last pack's entry
+                mcmeta["overlays"]["entries"] = list({e["directory"]: e for e in entries}.values())
             files["pack.mcmeta"] = json.dumps(mcmeta, indent=2, ensure_ascii=False).encode()
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             pass
+
+    if MERGED_ICON:
+        files["pack.png"] = (RESOURCEPACKS / MERGED_ICON).read_bytes()
 
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
         for rel, data in sorted(files.items()):
@@ -103,7 +134,7 @@ def main() -> None:
 
     print("Resourcepacks:")
     merge_packs([RESOURCEPACKS / name for name in MERGED_SOURCES], resources_out / f"{MERGED_NAME}.zip")
-    print(f"  merged  {' + '.join(MERGED_SOURCES)} -> {MERGED_NAME}")
+    print(f"  merged  {' + '.join(Path(name).name for name in MERGED_SOURCES)} -> {MERGED_NAME}")
 
     print(f"\nDone -> {OUTPUT}")
 
