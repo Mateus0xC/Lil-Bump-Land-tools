@@ -4,67 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lil Bump Land Tools</title>
-<style>
-  :root {
-    --bg: #f4f2ee; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70;
-    --border: #d9d6cf; --accent: #3f7d3a; --accent-text: #fff;
-    --code-bg: #1e1f22; --code-text: #e6e6e6; --error: #b3261e;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #17181a; --panel: #212226; --text: #ececec; --muted: #9a9aa0;
-      --border: #34353a; --accent: #5aa152; --accent-text: #0d140c;
-      --code-bg: #0f1012; --code-text: #e6e6e6; --error: #ff8a80;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
-  section {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 10px; padding: 18px; margin-bottom: 16px;
-  }
-  h2 { font-size: 15px; margin: 0 0 12px; }
-  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
-  input, textarea {
-    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
-    background: var(--bg); color: var(--text); font: inherit;
-  }
-  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  textarea { resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
-  .row { display: flex; gap: 8px; align-items: stretch; }
-  .row textarea { flex: 1; }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .wide { grid-column: span 2; }
-  @media (max-width: 480px) { .wide { grid-column: 1 / -1; } }
-  button {
-    border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-weight: 600;
-    background: var(--accent); color: var(--accent-text); cursor: pointer; white-space: nowrap;
-  }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  .check { display: flex; align-items: center; gap: 8px; align-self: end; height: 40px; margin: 0; color: var(--text); font-size: 14px; cursor: pointer; }
-  .check input { width: auto; }
-  .rot.disabled { opacity: .4; }
-  .status { font-size: 13px; margin-top: 8px; min-height: 1.5em; color: var(--muted); }
-  .status.error { color: var(--error); }
-  .hint { font-size: 13px; color: var(--muted); margin: -4px 0 12px; }
-  .hint code { word-break: break-all; }
-  pre {
-    margin: 0; padding: 14px; border-radius: 6px; background: var(--code-bg); color: var(--code-text);
-    font: 13px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all;
-  }
-  .out-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
-  .out-actions .status { margin-top: 0; }
-  kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 12px; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
+  <nav><a href="index.html" aria-current="page">Teleport</a><a href="commands.html">Commands</a></nav>
   <h1>Teleport Generator</h1>
   <p class="sub">Builds calls to <code>lbl:teleport/tp</code> and <code>lbl:teleport/tpr</code>.</p>
 
@@ -136,7 +80,7 @@ function parseCommand(text) {
   }
   $("x").value = m[1]; $("y").value = m[2]; $("z").value = m[3];
   if (m[4] != null) { $("yaw").value = m[4]; $("pitch").value = m[5]; }
-  st.textContent = "Coordinates imported" + (m[4] != null ? " (with yaw/pitch)." : ".");
+  st.textContent = "Coordinates imported.";
   st.className = "status";
   generate();
   return true;

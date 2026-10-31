@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lil Bump Land Commands</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <nav><a href="index.html">Teleport</a><a href="commands.html" aria-current="page">Commands</a></nav>
+  <h1>Commands</h1>
+  <p class="sub">Handy Lil Bump Land commands. Click Copy and paste in game.</p>
+
+  <section>
+    <h2>Give items</h2>
+    <p class="desc">Every custom item from the datapacks:</p>
+    <div class="cmd"><pre>/function #lbl:give_all</pre><button type="button">Copy</button></div>
+    <p class="desc" style="margin-top: 14px">Only Geckonomy items:</p>
+    <div class="cmd"><pre>/function #gecon:give_all</pre><button type="button">Copy</button></div>
+  </section>
+
+  <section>
+    <h2>Playtime reward</h2>
+    <p class="sentence">
+      Every <input id="ptMinutes" type="text" inputmode="numeric" value="10"> minutes,
+      every player gets <input id="ptReward" type="text" inputmode="numeric" value="10"> Rupees.
+    </p>
+    <div class="cmd"><pre id="ptTimeCmd"></pre><button type="button">Copy</button></div>
+    <div class="cmd"><pre id="ptRewardCmd"></pre><button type="button">Copy</button></div>
+    <div class="status" id="ptStatus"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function positiveInt(v) {
+  v = String(v).trim();
+  return /^\d+$/.test(v) && +v > 0 ? +v : null;
+}
+
+// playtime_time is in seconds (the datapack schedules "$(playtime_time)s")
+function updatePlaytime() {
+  const minutes = positiveInt($("ptMinutes").value);
+  const reward = positiveInt($("ptReward").value);
+  $("ptTimeCmd").textContent = `/scoreboard players set playtime_time lbl.temp ${minutes == null ? "?" : minutes * 60}`;
+  $("ptRewardCmd").textContent = `/scoreboard players set playtime_reward lbl.temp ${reward == null ? "?" : reward}`;
+  $("ptTimeCmd").nextElementSibling.disabled = minutes == null;
+  $("ptRewardCmd").nextElementSibling.disabled = reward == null;
+  const invalid = [minutes == null && "minutes", reward == null && "Rupees"].filter(Boolean);
+  $("ptStatus").textContent = invalid.length ? "Use a whole number above 0 for: " + invalid.join(", ") : "";
+  $("ptStatus").className = "status" + (invalid.length ? " error" : "");
+}
+["ptMinutes", "ptReward"].forEach(id => $(id).addEventListener("input", updatePlaytime));
+
+document.querySelectorAll(".cmd button").forEach(btn => btn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(btn.previousElementSibling.textContent);
+    btn.textContent = "Copied!";
+  } catch {
+    btn.textContent = "Failed";
+  }
+  setTimeout(() => btn.textContent = "Copy", 1200);
+}));
+
+updatePlaytime();
+</script>
+</body>
+</html>
