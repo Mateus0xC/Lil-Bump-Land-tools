@@ -30,6 +30,19 @@
     <div class="cmd"><pre id="ptRewardCmd"></pre><button type="button">Copy</button></div>
     <div class="status" id="ptStatus"></div>
   </section>
+
+  <section>
+    <h2>Trading tables near spectators</h2>
+    <p class="sentence">
+      Trading tables
+      <span class="segmented" role="radiogroup">
+        <label><input type="radio" name="spec" value="0" checked><span>don't render</span></label>
+        <label><input type="radio" name="spec" value="1"><span>render</span></label>
+      </span>
+      <span>when a spectator is nearby.<span id="specDefault"> (default)</span></span>
+    </p>
+    <div class="cmd"><pre id="specCmd"></pre><button type="button">Copy</button></div>
+  </section>
 </main>
 
 <script>
@@ -54,6 +67,13 @@ function updatePlaytime() {
 }
 ["ptMinutes", "ptReward"].forEach(id => $(id).addEventListener("input", updatePlaytime));
 
+function updateSpectator() {
+  const value = document.querySelector('input[name="spec"]:checked').value;
+  $("specCmd").textContent = `/scoreboard players set spectator_displays gecon.config ${value}`;
+  $("specDefault").hidden = value !== "0";
+}
+document.querySelectorAll('input[name="spec"]').forEach(r => r.addEventListener("change", updateSpectator));
+
 document.querySelectorAll(".cmd button").forEach(btn => btn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(btn.previousElementSibling.textContent);
@@ -65,6 +85,7 @@ document.querySelectorAll(".cmd button").forEach(btn => btn.addEventListener("cl
 }));
 
 updatePlaytime();
+updateSpectator();
 </script>
 </body>
 </html>
